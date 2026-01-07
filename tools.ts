@@ -291,6 +291,7 @@ const MAPS_TOOL: Tool = {
   }
 };
 
-const tools = [CONTACTS_TOOL, NOTES_TOOL, MESSAGES_TOOL, MAIL_TOOL, REMINDERS_TOOL, CALENDAR_TOOL, MAPS_TOOL];
+// NOTE: MESSAGES_TOOL disabled - using mac_messages_mcp instead (has SMS fallback)
+const tools = [CONTACTS_TOOL, NOTES_TOOL, MAIL_TOOL, REMINDERS_TOOL, CALENDAR_TOOL, MAPS_TOOL];
 
 export default tools;
