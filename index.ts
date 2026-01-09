@@ -808,6 +808,94 @@ end tell`;
 								};
 							}
 
+							case "archive": {
+								if (!args.account || !args.subject || !args.sender) {
+									throw new Error("Archive requires account, subject, and sender parameters");
+								}
+								const archiveResult = await mailModule.archiveEmail(
+									args.account,
+									args.subject,
+									args.sender,
+								);
+								return {
+									content: [
+										{
+											type: "text",
+											text: archiveResult.success
+												? `Successfully archived email: "${args.subject}"`
+												: `Failed to archive email: ${archiveResult.message}`,
+										},
+									],
+									isError: !archiveResult.success,
+								};
+							}
+
+							case "delete": {
+								if (!args.account || !args.subject || !args.sender) {
+									throw new Error("Delete requires account, subject, and sender parameters");
+								}
+								const deleteResult = await mailModule.deleteEmail(
+									args.account,
+									args.subject,
+									args.sender,
+								);
+								return {
+									content: [
+										{
+											type: "text",
+											text: deleteResult.success
+												? `Successfully deleted email: "${args.subject}"`
+												: `Failed to delete email: ${deleteResult.message}`,
+										},
+									],
+									isError: !deleteResult.success,
+								};
+							}
+
+							case "markread": {
+								if (!args.account || !args.subject || !args.sender) {
+									throw new Error("Mark read requires account, subject, and sender parameters");
+								}
+								const markReadResult = await mailModule.markAsRead(
+									args.account,
+									args.subject,
+									args.sender,
+								);
+								return {
+									content: [
+										{
+											type: "text",
+											text: markReadResult.success
+												? `Successfully marked email as read: "${args.subject}"`
+												: `Failed to mark email as read: ${markReadResult.message}`,
+										},
+									],
+									isError: !markReadResult.success,
+								};
+							}
+
+							case "checkreplied": {
+								if (!args.account || !args.subject || !args.sender) {
+									throw new Error("Check replied requires account, subject, and sender parameters");
+								}
+								const checkResult = await mailModule.checkIfReplied(
+									args.account,
+									args.subject,
+									args.sender,
+								);
+								return {
+									content: [
+										{
+											type: "text",
+											text: checkResult.replied
+												? `✅ You replied to this email on ${checkResult.replySentAt}`
+												: `❌ No reply found for this email`,
+										},
+									],
+									isError: false,
+								};
+							}
+
 							default:
 								throw new Error(`Unknown operation: ${args.operation}`);
 						}
@@ -1425,7 +1513,7 @@ function isMessagesArgs(args: unknown): args is {
 }
 
 function isMailArgs(args: unknown): args is {
-	operation: "unread" | "search" | "send" | "mailboxes" | "accounts" | "latest";
+	operation: "unread" | "search" | "send" | "mailboxes" | "accounts" | "latest" | "archive" | "delete" | "markread" | "checkreplied";
 	account?: string;
 	mailbox?: string;
 	limit?: number;
@@ -1435,6 +1523,7 @@ function isMailArgs(args: unknown): args is {
 	body?: string;
 	cc?: string;
 	bcc?: string;
+	sender?: string;
 } {
 	if (typeof args !== "object" || args === null) return false;
 
@@ -1449,11 +1538,12 @@ function isMailArgs(args: unknown): args is {
 		body,
 		cc,
 		bcc,
+		sender,
 	} = args as any;
 
 	if (
 		!operation ||
-		!["unread", "search", "send", "mailboxes", "accounts", "latest"].includes(
+		!["unread", "search", "send", "mailboxes", "accounts", "latest", "archive", "delete", "markread", "checkreplied"].includes(
 			operation,
 		)
 	) {
@@ -1482,6 +1572,15 @@ function isMailArgs(args: unknown): args is {
 		case "latest":
 			// No additional required fields
 			break;
+		case "archive":
+		case "delete":
+		case "markread":
+		case "checkreplied":
+			// These operations require account, subject, and sender to identify the message
+			if (!account || typeof account !== "string") return false;
+			if (!subject || typeof subject !== "string") return false;
+			if (!sender || typeof sender !== "string") return false;
+			break;
 	}
 
 	// Validate field types if present
@@ -1490,6 +1589,7 @@ function isMailArgs(args: unknown): args is {
 	if (limit && typeof limit !== "number") return false;
 	if (cc && typeof cc !== "string") return false;
 	if (bcc && typeof bcc !== "string") return false;
+	if (sender && typeof sender !== "string") return false;
 
 	return true;
 }
