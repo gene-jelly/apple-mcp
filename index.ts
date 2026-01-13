@@ -896,6 +896,29 @@ end tell`;
 								};
 							}
 
+							case "move": {
+								if (!args.account || !args.subject || !args.sender || !args.targetMailbox) {
+									throw new Error("Move requires account, subject, sender, and targetMailbox parameters");
+								}
+								const moveResult = await mailModule.moveToFolder(
+									args.account,
+									args.subject,
+									args.sender,
+									args.targetMailbox,
+								);
+								return {
+									content: [
+										{
+											type: "text",
+											text: moveResult.success
+												? `Successfully moved email to "${args.targetMailbox}"`
+												: `Failed to move email: ${moveResult.message}`,
+										},
+									],
+									isError: !moveResult.success,
+								};
+							}
+
 							default:
 								throw new Error(`Unknown operation: ${args.operation}`);
 						}
@@ -1513,7 +1536,7 @@ function isMessagesArgs(args: unknown): args is {
 }
 
 function isMailArgs(args: unknown): args is {
-	operation: "unread" | "search" | "send" | "mailboxes" | "accounts" | "latest" | "archive" | "delete" | "markread" | "checkreplied";
+	operation: "unread" | "search" | "send" | "mailboxes" | "accounts" | "latest" | "archive" | "delete" | "markread" | "checkreplied" | "move";
 	account?: string;
 	mailbox?: string;
 	limit?: number;
@@ -1524,6 +1547,7 @@ function isMailArgs(args: unknown): args is {
 	cc?: string;
 	bcc?: string;
 	sender?: string;
+	targetMailbox?: string;
 } {
 	if (typeof args !== "object" || args === null) return false;
 
@@ -1539,11 +1563,12 @@ function isMailArgs(args: unknown): args is {
 		cc,
 		bcc,
 		sender,
+		targetMailbox,
 	} = args as any;
 
 	if (
 		!operation ||
-		!["unread", "search", "send", "mailboxes", "accounts", "latest", "archive", "delete", "markread", "checkreplied"].includes(
+		!["unread", "search", "send", "mailboxes", "accounts", "latest", "archive", "delete", "markread", "checkreplied", "move"].includes(
 			operation,
 		)
 	) {
@@ -1581,6 +1606,13 @@ function isMailArgs(args: unknown): args is {
 			if (!subject || typeof subject !== "string") return false;
 			if (!sender || typeof sender !== "string") return false;
 			break;
+		case "move":
+			// Move requires account, subject, sender, and targetMailbox
+			if (!account || typeof account !== "string") return false;
+			if (!subject || typeof subject !== "string") return false;
+			if (!sender || typeof sender !== "string") return false;
+			if (!targetMailbox || typeof targetMailbox !== "string") return false;
+			break;
 	}
 
 	// Validate field types if present
@@ -1590,6 +1622,7 @@ function isMailArgs(args: unknown): args is {
 	if (cc && typeof cc !== "string") return false;
 	if (bcc && typeof bcc !== "string") return false;
 	if (sender && typeof sender !== "string") return false;
+	if (targetMailbox && typeof targetMailbox !== "string") return false;
 
 	return true;
 }

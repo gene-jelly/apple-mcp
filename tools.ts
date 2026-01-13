@@ -80,14 +80,14 @@ const CONTACTS_TOOL: Tool = {
   
   const MAIL_TOOL: Tool = {
     name: "mail",
-    description: "Interact with Apple Mail app - read unread emails, search emails, and send emails",
+    description: "Interact with Apple Mail app - read, search, send, archive, delete, move emails between folders",
     inputSchema: {
       type: "object",
       properties: {
         operation: {
           type: "string",
-          description: "Operation to perform: 'unread', 'search', 'send', 'mailboxes', 'accounts', or 'latest'",
-          enum: ["unread", "search", "send", "mailboxes", "accounts", "latest"]
+          description: "Operation to perform: 'unread', 'search', 'send', 'mailboxes', 'accounts', 'latest', 'archive', 'delete', 'markread', 'checkreplied', or 'move'",
+          enum: ["unread", "search", "send", "mailboxes", "accounts", "latest", "archive", "delete", "markread", "checkreplied", "move"]
         },
         account: {
           type: "string",
@@ -124,6 +124,14 @@ const CONTACTS_TOOL: Tool = {
         bcc: {
           type: "string",
           description: "BCC email address (optional for send operation)"
+        },
+        sender: {
+          type: "string",
+          description: "Sender email/name to identify message (required for archive, delete, markread, checkreplied, move)"
+        },
+        targetMailbox: {
+          type: "string",
+          description: "Destination mailbox name (required for move operation)"
         }
       },
       required: ["operation"]

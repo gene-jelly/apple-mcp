@@ -917,6 +917,88 @@ end tell`;
 	}
 }
 
+/**
+ * Move an email to a specific mailbox/folder
+ */
+async function moveToFolder(
+	account: string,
+	subject: string,
+	sender: string,
+	targetMailbox: string,
+): Promise<{ success: boolean; message: string }> {
+	try {
+		const accessResult = await requestMailAccess();
+		if (!accessResult.hasAccess) {
+			throw new Error(accessResult.message);
+		}
+
+		const safeAccount = account.replace(/"/g, '\\"');
+		const safeSubject = subject.replace(/"/g, '\\"').replace(/\\/g, '\\\\');
+		const safeSender = sender.replace(/"/g, '\\"');
+		const safeTargetMailbox = targetMailbox.replace(/"/g, '\\"');
+
+		const script = `
+tell application "Mail"
+    try
+        set targetAccount to first account whose name is "${safeAccount}"
+        set destBox to missing value
+
+        -- Find target mailbox (case-insensitive search)
+        repeat with mb in mailboxes of targetAccount
+            set mbName to name of mb
+            if mbName is "${safeTargetMailbox}" or mbName contains "${safeTargetMailbox}" then
+                set destBox to mb
+                exit repeat
+            end if
+        end repeat
+
+        if destBox is missing value then
+            return "ERROR:Mailbox '${safeTargetMailbox}' not found in account ${safeAccount}"
+        end if
+
+        -- Find the message
+        set foundMsg to missing value
+        repeat with mb in mailboxes of targetAccount
+            try
+                set msgs to (messages of mb whose subject contains "${safeSubject}" and sender contains "${safeSender}")
+                if (count of msgs) > 0 then
+                    set foundMsg to item 1 of msgs
+                    exit repeat
+                end if
+            end try
+        end repeat
+
+        if foundMsg is missing value then
+            return "ERROR:Message not found"
+        end if
+
+        -- Move to target mailbox
+        move foundMsg to destBox
+        return "SUCCESS:Message moved to ${safeTargetMailbox}"
+    on error errMsg
+        return "ERROR:" & errMsg
+    end try
+end tell`;
+
+		const result = await runAppleScript(script);
+
+		if (typeof result === "string") {
+			if (result.startsWith("SUCCESS:")) {
+				return { success: true, message: result.substring(8) };
+			} else if (result.startsWith("ERROR:")) {
+				return { success: false, message: result.substring(6) };
+			}
+		}
+
+		return { success: false, message: "Unknown response from Mail" };
+	} catch (error) {
+		return {
+			success: false,
+			message: `Error moving email: ${error instanceof Error ? error.message : String(error)}`
+		};
+	}
+}
+
 export default {
 	getUnreadMails,
 	searchMails,
@@ -930,4 +1012,5 @@ export default {
 	deleteEmail,
 	markAsRead,
 	checkIfReplied,
+	moveToFolder,
 };
